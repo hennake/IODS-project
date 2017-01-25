@@ -1,0 +1,9 @@
+
+## What is this?
+
+This document was created for the RStudio Exercise 1 to see, how an RMarkdown example file looks like.
+
+
+## Link to my course diary
+
+https://hennake.github.io/IODS-project/

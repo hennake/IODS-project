@@ -1,14 +1,16 @@
 ---
 title: "IODS course project"
+author: "Henna Kettunen"
 output:
   html_document:
-    theme: cosmo
+    theme: paper
     toc: true
     toc_depth: 2
     fig_caption: true
     fig_width: 6
     fig_height: 4
     code_folding: hide
+
 ---
 
 ***
