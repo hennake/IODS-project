@@ -3,7 +3,7 @@ title: "IODS course project"
 author: "Henna Kettunen"
 output:
   html_document:
-    theme: paper
+    theme: cosmo
     toc: true
     toc_depth: 2
     fig_caption: true

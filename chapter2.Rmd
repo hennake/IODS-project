@@ -1,7 +1,128 @@
-# Insert chapter 2 title here
+# Exercise 2: Data analysis
 
-*Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using  
+## Description of the data
+
+The dataset consists of data on the relationship between students' learning approaches and their achievements in an introductory statistics course in Finland. More information about the original dataset is available at http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS2-meta.txt.
+
+After manipulation, the dataset only has the following variables:
+
+```
+* gender     Gender: M (Male), F (Female)
+* age        Age (in years) derived from the date of birth
+* attitude   Global attitude toward statistics
+* deep       Average of points from questions related to deep learning approach
+* stra       Average of points from questions related to strategic learning approach
+* surf       Average of points from questions related to surface learning approach
+* points     Exam points
+```
+
+Students with zero exam points were removed from the dataset.
+
+Data manipulation is described in detail [here](./data/create_learning_2014.r).
+
+
+## Reading the data into RStudio
+
+The data can be read into RStudio eg. with the `read.table` command as follows:
+
+```{r}
+students2014 <- read.table("./data/learning2014.txt", sep="\t", dec=".", header=T)
+```
+
+Now the data is stored in the R object students2014.
+
+
+## Explorative analysis
+
+How does the manipulated data look? A table of summary statistics is often a good starting point for an explorative analysis. We can also use the `table` command to examine frequency distribution of a certain variable in more details.
+
+```{r}
+library(psych)
+describe(students2014)
+```
+
+A boxplot is a graphical tool for examining the distributions of individual variables. In this case, there is quite a lot of variation in the ranges of individual variables, and the picture is not as informative as one could wish.
+
+```{r}
+boxplot(students2014)
+```
+
+We can draw a pairplot to check if there are associations between the variables.
+
+```{r}
+library(GGally)
+library(ggplot2)
+p <- ggpairs(students2014, mapping = aes(col=gender, alpha=0.3), lower = list(combo = wrap("facethist", bins = 20)))
+p
+```
+
+In order to check the gender distribution of students, we can use the `table` command. It seems that women are more interested in statistics than men! (Or perhaps there were more women to whom it was mandatory to take the course...)
+
+```{r}
+table(students2014$gender)
+```
+
+All in all, the pictures tell us that
+
+* Gender is a binary variable, and the other variables are continuous.
+* Age is skewed to the left, as the typical age of university students is 20 something, but there are also a couple of older students.
+* The pairplot suggests that the variable `points` might be slightly bimodal, but in a histogram (below) there seems to be no severe deviation from normality. Thus we might model exam points with a linear regression model.
+* There might be an association between a student's attitude toward statistics and his/her exam points.
+
+```{r}
+hist(students2014$points, main="Points", xlab="")
+```
+
+
+## Regression analyses
+
+Let's fit a regression model and check, if the suggested association between a student's attitude and his/her exam points is statistically sound. Clearly, the exam points is the responsive variable and the attitude is an explanatory variable. Adding multiple explanatory variables into the model might reveal more associations between the variables. So let's include also gender and surf as explanatory variables.
+
+```{r}
+fit1 <- lm(points ~ gender + attitude + surf, data = students2014)
+summary(fit1)
+```
+
+The attitude is the only statistically significant (p < 0.05) explanatory variable (among the three that were tested) for the exam points. The other two are not statistically significant (p > 0.05), ie. we don't have sufficient evidence to reject the null hypothesis that the regression coefficients of gender and surf (column Estimate) differ from zero. We should note that the p-value 0.05 is only a coarse rule of thumb, and cases on the borderline should be examined more carefully. Now we need to refit the model to remove gender and surf.
+
+```{r}
+fit2 <- lm(points ~ attitude, data = students2014)
+summary(fit2)
+```
+
+The explanatory variable attitude is statistically significant (p < 0.001), so we can reject the null hypothesis that attitude has no effect on exam points. Also the intercept (constant) term of the model, which is the expected mean value of exam points when the value of attitude is zero, is statistically significant. There is only one explanatory variable left in this model, so we don't need to worry about potential collinearity between explanators. The estimate (coefficient) of attitude (0.35) means that when the attitude increases by 1 unit, the student's exam score is expected to increase by 0.35 units on average. The multiple R-squared value indicates that the model explains about 19 % of variation in the response variable. The adjusted R-squared value is basically the same thing, but it accounts for the phenomenon of the R^2 automatically increasing when extra explanatory variables are added to the model.
+
+We can now visualize the regression model on the observed data as a red line:
+
+```{r}
+plot(students2014$attitude, students2014$points, xlim = c(0, max(students2014$attitude)), xlab="Attitude toward statistics", ylab="Exam points")
+abline(fit2, col="red")
+```
+
+
+## Model diagnostics
+
+Before declaring that a student's attitude toward statistics is a good predictor for his/her exam performance, we have to make sure that the critical assumptions of linear regression model are met. The assumptions of the model are:
+
+1. The errors are normally distributed.
+2. The errors are not correlated.
+3. The errors have a constant variance (homoscedasticity).
+4. The size of a given error does not depend on the explanatory variables.
+
+Let's produce a couple of diagnostic plots to check these assumptions.
+
+```{r}
+par(mfrow=c(2,2))
+plot(fit2, which=c(1,2,5))
+```
+
+The first plot (residuals vs. fitted values) shows no detectable pattern in the residuals, indicating that assumptions 3 and 4 are valid. Also the assumption 1 seems to be valid, as the residuals align quite neatly along or near the straight line in the QQ-plot. No influential outliers show up in the last plot. The assumption 2 cannot be assessed based on these diagnostic plots, but it is mostly to be worried if there is a possibility of temporal or spatial autocorrelation in the data (eg. time series or spatial data). Thus, the assumptions of the linear regression model seem to be valid for our model.
+
+
+## Summary
+
+Exam performance can be modeled with a linear regression model with student's attitude toward statistics as an explanatory variable.
+
+
+
