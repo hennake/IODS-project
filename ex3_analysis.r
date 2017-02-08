@@ -129,6 +129,8 @@ dd$pred <- pred2
 
 # Confusion matrix
 conf <- table(obs=dd$high_use, pred=pred2)
+test<-addmargins(conf)
+prop.table(conf)
 
 # Same as a plot
 # initialize a plot of 'high_use' versus 'probability' in 'alc'
@@ -144,14 +146,11 @@ loss_func <- function(class, prob) {
   n_wrong <- abs(class - prob) > 0.5
   mean(n_wrong)
 }
+wrong <- (test[1,2] + test[2,1]) / test[3,3]
 
 # call loss_func to compute the average number of wrong predictions in the (training) data
 loss_func(class = dd$high_use, prob = dd$prob)
 
-# treshold 0.3
-pred3 <- ifelse(pred > 0.7, TRUE, FALSE)
-dd$pred <- pred3
-loss_func(class = dd$high_use, prob = dd$pred)
 
 
 # Simple guessing strategy: nobody is a high user
