@@ -46,7 +46,7 @@ list(tbl1, tblp1, tbl2, tblp2, tbl3, tblp3,
      absences=quantile(dd$absences), grade=quantile(dd$G3))
 
 
-# Crosstabulations of binary variables
+# Crosstabulations
 tab1 <- table(high_use=dd$high_use, sex=dd$sex)
 tab2 <- table(high_use=dd$high_use, parents_status=dd$Pstatus)
 tab3 <- table(high_use=dd$high_use, absences=dd$absences)
@@ -56,7 +56,6 @@ tabp1 <- prop.table(tab1, 2)
 tabp2 <- prop.table(tab2, 2)
 tabp3 <- prop.table(tab3, 2)
 tabp4 <- prop.table(tab4, 2)
-
 
 list(addmargins(tab1), tabp1,
      addmargins(tab2), tabp2)

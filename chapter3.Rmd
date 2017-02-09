@@ -3,138 +3,174 @@
 
 ## Description of the data
 
-The dataset consists of data on the relationship between students' learning approaches and their achievements in an introductory statistics course in Finland. More information about the original dataset is available at http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS2-meta.txt.
+The joined data set used in this analysis exercise combines two student alcohol consumption data sets. The following adjustments have been made in the data wrangling exercise:
 
-After manipulation, the dataset only has the following variables:
+* The variables not used for joining the two data have been combined by averaging (including the grade variables)
+* 'alc_use' is the average of 'Dalc' and 'Walc'
+* 'high_use' is TRUE if 'alc_use' is higher than 2 and FALSE otherwise
 
-```
-* gender     Gender: M (Male), F (Female)
-* age        Age (in years) derived from the date of birth
-* attitude   Global attitude toward statistics
-* deep       Average of points from questions related to deep learning approach
-* stra       Average of points from questions related to strategic learning approach
-* surf       Average of points from questions related to surface learning approach
-* points     Exam points
-```
+Original data source: https://archive.ics.uci.edu/ml/datasets/STUDENT+ALCOHOL+CONSUMPTION
 
-Students with zero exam points were removed from the dataset.
-
-Data manipulation is described in detail [here](./data/create_learning_2014.r).
-
-
-## Reading the data into RStudio
-
-The data can be read into RStudio eg. with the `read.table` command as follows:
-
+First, let's read the data into R and list the variable names:
 ```{r}
-students2014 <- read.table("./data/learning2014.txt", sep="\t", dec=".", header=T)
+alc <- read.table("./data/alc.csv", sep=";", dec=".", header=T)
+colnames(alc)
 ```
 
-Now the data is stored in the R object students2014.
+
+## Hypotheses
+
+The purpose of the analysis was to study the relationships between high/low alcohol consumption and some of the other variables in the data. I chose the following variables for the analysis and set these hypotheses:
+
+### Response variable
+* high_use - Boolean response variable describing the level of alcohol consumption
+
+### Explanative variables
+* sex - males' alcohol consumption is on average higher than females'
+* Pstatus - parents' cohabitation reduces risk for high alcohol consumption
+* absences - positive statistical association between absences and high alcohol consumption
+* G3 (final grade) - better grade, lower alcohol consumption
+
+Next, I limited the data used for the analysis to include only the five variables mentioned above.
+```{r}
+library(dplyr)
+dd <- select(alc, one_of(c("sex", "Pstatus", "absences", "G3", "high_use")))
+```
 
 
 ## Explorative analysis
 
-How does the manipulated data look? A table of summary statistics is often a good starting point for an explorative analysis. 
+Now we have some hypotheses produced with the [Stetson-Harrison method](http://www.urbandictionary.com/define.php?term=Stetson-Harrison%20method). Will the data shoot them down straight away? Let's see and produce some summaries and explorative plots of the variables and their associations.
 
+First, a basic summary table:
 ```{r}
+# Basic summary table
 library(psych)
-describe(students2014)
+describe(dd, skew=F)
 ```
 
-A boxplot is a graphical tool for examining the distributions of individual variables. In this case, there is quite a lot of variation in the ranges of individual variables, and the picture is not as informative as one could wish.
-
+Sex and parents' cohabitation status are binary factors, and their associations to high alcohol use are easy to present as crosstabulations. Absences and final grade are integer variables with a wide range of values and not so suitable for crosstabulation.
 ```{r}
-boxplot(students2014)
+tab1 <- table(high_use=dd$high_use, sex=dd$sex)
+tab2 <- table(high_use=dd$high_use, parents_status=dd$Pstatus)
+tabp1 <- prop.table(tab1, 2)
+tabp2 <- prop.table(tab2, 2)
+list(addmargins(tab1), tabp1,
+     addmargins(tab2), tabp2)
 ```
 
-We can draw a pairplot to check if there are associations between the variables.
+We might visualize these associations with stacked proportional bar plots:
+```{r}
+layout(matrix(c(1,1,2,2,3), nrow=1, ncol=5, byrow=T))
+par(mai=c(0.6,0.3,0.6,0.3))
+barplot(tabp1, main="Sex vs high use", col=c("#F8766D","#00BFC4"))
+barplot(tabp2, main="Pstatus vs high use", col=c("#F8766D","#00BFC4"))
+par(mai=c(0.7,0.1,0.7,0.1))
+plot.new()
+legend("topleft", legend=c("FALSE","TRUE"), fill=c("#F8766D","#00BFC4"), title="High use")
 
-```{r warning=FALSE, error=FALSE, message=FALSE}
-library(GGally)
+```
+
+The associations between absences and alchol use, and final grade and alcohol use can be visualized more easily with boxplots:
+```{r}
 library(ggplot2)
-p <- ggpairs(students2014, mapping = aes(col=gender, alpha=0.3), lower = list(combo = wrap("facethist", bins = 20)))
-p
+library(gridExtra)
+g1 <- ggplot(dd, aes(x = high_use, y = G3, fill=high_use)) + ggtitle("Grade vs high use")
+g2 <- ggplot(alc, aes(x = high_use, y = absences, fill=high_use)) + ggtitle("Absences vs high use")
+bp3 <- g1 + geom_boxplot() + ylab("grade") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))
+bp4 <- g2 + geom_boxplot() + ylab("absences") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))
+grid.arrange(bp3, bp4, ncol=2, nrow=1)
 ```
 
-In order to check the gender distribution of students, we can use the `table` command. It seems that women are more interested in statistics than men! (Or perhaps there were more women to whom it was mandatory to take the course...)
+Based on the explorative analysis, men seem to be more prone to drink heavily than females. Heavy drinkers do get on average lower grades than those who don't drink much. Heavy drinkers are also slightly more inclined to have a high number of absences than others. However, there seems to be no association between parents' cohabitation status and student's alchol use. It seems that my hypotheses about sex's, absences' and final grade's associations with alcohol consumption might get some support from the explorative analysis.
 
+
+## Logistic regression model
+
+Let's fit a logistic regression model to see if these findings hold.
 ```{r}
-table(students2014$gender)
-```
-
-The pairplot suggests that the variable `points` might be slightly bimodal, but in a histogram there seems to be no severe deviation from normality.
-
-```{r}
-hist(students2014$points, main="Distribution of exam points", xlab="points")
-```
-
-All in all, the explorative analysis tells us that
-
-* Gender is a binary variable, and the other variables are continuous.
-* Age is skewed to the left, as the typical age of university students is 20 something, but there are also a couple of older students.
-* There might be an association between a student's attitude toward statistics and his/her exam points.
-* Exam points is reasonably normally distributed, and we can use a linear regression model to model the association between a student's attitude and his/her exam points.
-
-
-
-## Regression analyses
-
-Let's fit a regression model and check, if the suggested association between a student's attitude and his/her exam points is statistically sound. Clearly, the exam points is the responsive variable and the attitude is an explanatory variable. Adding multiple explanatory variables into the model might reveal more associations between the variables. So let's include also gender and surf as explanatory variables.
-
-```{r}
-fit1 <- lm(points ~ gender + attitude + surf, data = students2014)
+# First model
+fit1 <- glm(high_use ~ sex + Pstatus + absences + G3, family=binomial, data=dd)
 summary(fit1)
 ```
 
-The attitude is the only statistically significant (p < 0.05) explanatory variable (among the three that were tested) for the exam points. The other two are not statistically significant (p > 0.05), ie. we don't have sufficient evidence to reject the null hypothesis that the regression coefficients of gender and surf (column Estimate) differ from zero. We should note that the borderline p-value of 0.05 is only a coarse rule of thumb, and cases on the borderline should be examined more carefully.
+The equation for the model is of form `log(p/(1-p)) = exp(a + b*sex + c*Pstatus + d*absences + e*G3)` where `p` is the estimated probability for high alcohol use and `a - e` are the model coefficients. `log(p/(1-p))` is the logit function of `p`. The coefficient values for factor variables (sex and Pstatus) are calculated separatedly for each unique factor level so that one level is chosen as the base level. The coefficients presented above denote the difference between the coefficient of the marked level and the base level. So the coefficient for the sex level `F` (chosen as the base level and omitted from the table) is actually the intercept -0.98, and the coefficient for the sex level `M` is -0.98141 + 0.98330 = 0.00189 (cf. [this explanation](http://stats.stackexchange.com/questions/60817/significance-of-categorical-predictor-in-logistic-regression)).
 
-Now we need to refit the model to remove gender and surf.
+The coefficients are easier to interpret if transformed to odd ratios (ORs) by exponantiation. The odd ratio form of a coefficient denotes the change of the odd p/(1-p), when the value of the explanative variable changes by one unit. We can also use exponentiation and `confint`-function to calculate the confidence intervals for the odd ratios on the confidence level of 0.95.
+```{r}
+data.frame(OR=round(exp(summary(fit1)$coef[,1]), 3),
+           CI=round(exp(confint(fit1)), 3),
+           "p-value"=round(summary(fit1)$coef[,4], 3))
+```
+
+Interpretation of OR values:
+* If OR > 1 (ie. the original coefficient, OC, is positive), an increase in the explanator increases the response probability `p`.
+* If 0 < OR < 1 (ie. negative OC), an increase in the explanator decreases the response probability `p`.
+* If OR = 1 (ie. OC=1), the explanator has no effect on the response variable.
+* (OR is never negative, and OR for a coefficient can't be exactly zero.)
+
+We can check with a likelihood ratio test if the factor variables sex and Pstatus as a whole are statistically significant explanators in our fitted model.
+```{r}
+anova(fit1, test="Chisq")
+```
+
+It seems that sex, absences and final grade (G3) are statistically significant explanators for alcohol use. The directions of their effects are also as I hyphothesized: probability for high alcohol usage increases with higher number of absences, decreases with better grades, and is higher for males than females. My hypothesis about parents' cohabitation was however wrong, as cohabitation is not a statistically significant explanator in the model.
+
+
+## Assessing model performance
+
+The variable Pstatus can be omitted from the model, as it is not statistically significant. Thus the model needs to be refitted.
+```{r}
+fit2 <- glm(high_use ~ sex + absences + G3, family=binomial, data=dd)
+data.frame(OR=round(exp(summary(fit2)$coef[,1]), 3),
+           CI=round(exp(confint(fit2)), 3),
+           "p-value"=round(summary(fit2)$coef[,4], 3))
+anova(fit2, test="Chisq")
+```
+
+Looks good, but how does the model perform as a binary classificator? To assess the model performance we need to produce predictions with it, produce and visualize the confusion matrix, and compute the total proportion of inaccurately classified individuals (= the training error).
 
 ```{r}
-fit2 <- lm(points ~ attitude, data = students2014)
-summary(fit2)
+# Prediction
+pred <- predict(fit2, type="response")
+dd$prob <- pred
+pred2 <- ifelse(pred > 0.5, TRUE, FALSE)
+dd$pred <- pred2
+
+# Confusion matrix
+conf <- table(obs=dd$high_use, pred=pred2)
+test<-addmargins(conf)
+prop.table(conf)
+
+# Same as a plot
+# initialize a plot of 'high_use' versus 'probability' in 'alc'
+g <- ggplot(dd, aes(x = prob, y = high_use, col = pred2))
+# define the geom as points and draw the plot
+g + geom_point()
 ```
 
-The explanatory variable attitude is statistically significant (p < 0.001), so we can reject the null hypothesis that attitude has no effect on exam points. Also the intercept (constant) term of the model, which is the expected mean value of exam points when the value of attitude is zero, is statistically significant. There is only one explanatory variable left in this model, so we don't need to worry about potential collinearity between explanators. The estimate (coefficient) of attitude (0.35) means that when the attitude increases by 1 unit, the student's exam score is expected to increase by 0.35 units on average. The multiple R-squared value indicates that the model explains about 19 % of variation in the response variable. The adjusted R-squared value is basically the same thing, but it accounts for the phenomenon of the R^2^ automatically increasing when extra explanatory variables are added to the model.
-
-We can now visualize the regression model on the observed data as a red line:
-
+Training error
 ```{r}
-plot(students2014$attitude, students2014$points, xlim = c(0, max(students2014$attitude)), xlab="Attitude toward statistics", ylab="Exam points")
-abline(fit2, col="red")
+# define a loss function (mean prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# call loss_func to compute the average number of wrong predictions in the (training) data
+loss_func(class = dd$high_use, prob = dd$prob)
 ```
 
-Note to self: Using the p-values of individual model coefficients is not the recommended way of model selection, and it might be a better idea to calculate eg. an [AIC value](https://en.wikipedia.org/wiki/Akaike_information_criterion) for each model. However, the results are the same in this case, as a smaller AIC means a better model fit.
 
+Simple guessing strategy: nobody is a high user (as it is more common to not drink heavily).
 ```{r}
-paste0("AIC for model 1: ", AIC(fit1))
-paste0("AIC for model 2: ", AIC(fit2))
+# Simple guessing strategy: nobody is a high user
+dd$pred2 <- F
+loss_func(class = dd$high_use, prob = dd$pred2)
 ```
 
 
-## Model diagnostics
 
-Before declaring that a student's attitude toward statistics is a good predictor for his/her exam performance, we have to make sure that the critical assumptions of linear regression model are met. The assumptions of the model are:
-
-1. The errors are normally distributed.
-2. The errors are not correlated.
-3. The errors have a constant variance (homoscedasticity).
-4. The size of a given error does not depend on the explanatory variables.
-
-Let's produce a couple of diagnostic plots to check these assumptions.
-
-```{r fig.width=7, fig.height=7}
-par(mfrow=c(2,2))
-plot(fit2, which=c(1,2,5))
-```
-
-The first plot (residuals vs. fitted values) shows no detectable pattern in the residuals, indicating that assumptions 3 and 4 are valid. Also the assumption 1 seems to be valid, as the residuals align quite neatly along or near the straight line in the QQ-plot. No influential outliers show up in the last plot. The assumption 2 cannot be assessed based on these diagnostic plots, but it is mostly to be worried if there is a possibility of temporal or spatial autocorrelation in the data (eg. time series or spatial data). Thus, the assumptions of the linear regression model seem to be valid for our model.
-
-
-## Summary
-
-There is a statistical association between a student's attitude toward statistics and his/her exam performance: the more positive the attitude, the better the expected performance. This association can be modeled with a linear regression model.
 
 
 
