@@ -9,10 +9,10 @@ The joined data set used in this analysis exercise combines two student alcohol 
 * 'alc_use' is the average of 'Dalc' and 'Walc'
 * 'high_use' is TRUE if 'alc_use' is higher than 2 and FALSE otherwise
 
-Original data source: https://archive.ics.uci.edu/ml/datasets/STUDENT+ALCOHOL+CONSUMPTION
+More info: [Original data source](https://archive.ics.uci.edu/ml/datasets/STUDENT+ALCOHOL+CONSUMPTION) and [R-code for data manipulation](https://github.com/hennake/IODS-project/blob/master/data/create_alc.r)
 
 First, let's read the data into R and list the variable names:
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 alc <- read.table("./data/alc.csv", sep=";", dec=".", header=T)
 colnames(alc)
 ```
@@ -22,19 +22,22 @@ colnames(alc)
 
 The purpose of the analysis was to study the relationships between high/low alcohol consumption and some of the other variables in the data. I chose the following variables for the analysis and set these hypotheses:
 
-### Response variable
+Response variable:
+
 * high_use - Boolean response variable describing the level of alcohol consumption
 
-### Explanative variables
+Explanatory variables:
+
 * sex - males' alcohol consumption is on average higher than females'
 * Pstatus - parents' cohabitation reduces risk for high alcohol consumption
 * absences - positive statistical association between absences and high alcohol consumption
 * G3 (final grade) - better grade, lower alcohol consumption
 
 Next, I limited the data used for the analysis to include only the five variables mentioned above.
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 library(dplyr)
 dd <- select(alc, one_of(c("sex", "Pstatus", "absences", "G3", "high_use")))
+str(dd)
 ```
 
 
@@ -43,14 +46,14 @@ dd <- select(alc, one_of(c("sex", "Pstatus", "absences", "G3", "high_use")))
 Now we have some hypotheses produced with the [Stetson-Harrison method](http://www.urbandictionary.com/define.php?term=Stetson-Harrison%20method). Will the data shoot them down straight away? Let's see and produce some summaries and explorative plots of the variables and their associations.
 
 First, a basic summary table:
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 # Basic summary table
 library(psych)
 describe(dd, skew=F)
 ```
 
 Sex and parents' cohabitation status are binary factors, and their associations to high alcohol use are easy to present as crosstabulations. Absences and final grade are integer variables with a wide range of values and not so suitable for crosstabulation.
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 tab1 <- table(high_use=dd$high_use, sex=dd$sex)
 tab2 <- table(high_use=dd$high_use, parents_status=dd$Pstatus)
 tabp1 <- prop.table(tab1, 2)
@@ -60,7 +63,7 @@ list(addmargins(tab1), tabp1,
 ```
 
 We might visualize these associations with stacked proportional bar plots:
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 layout(matrix(c(1,1,2,2,3), nrow=1, ncol=5, byrow=T))
 par(mai=c(0.6,0.3,0.6,0.3))
 barplot(tabp1, main="Sex vs high use", col=c("#F8766D","#00BFC4"))
@@ -72,7 +75,7 @@ legend("topleft", legend=c("FALSE","TRUE"), fill=c("#F8766D","#00BFC4"), title="
 ```
 
 The associations between absences and alchol use, and final grade and alcohol use can be visualized more easily with boxplots:
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 library(ggplot2)
 library(gridExtra)
 g1 <- ggplot(dd, aes(x = high_use, y = G3, fill=high_use)) + ggtitle("Grade vs high use")
@@ -82,35 +85,36 @@ bp4 <- g2 + geom_boxplot() + ylab("absences") + theme(legend.position="none", pl
 grid.arrange(bp3, bp4, ncol=2, nrow=1)
 ```
 
-Based on the explorative analysis, men seem to be more prone to drink heavily than females. Heavy drinkers do get on average lower grades than those who don't drink much. Heavy drinkers are also slightly more inclined to have a high number of absences than others. However, there seems to be no association between parents' cohabitation status and student's alchol use. It seems that my hypotheses about sex's, absences' and final grade's associations with alcohol consumption might get some support from the explorative analysis.
+Based on the explorative analysis, males seem to be more prone to drink heavily than females. Heavy drinkers do get on average lower grades than those who don't drink much. Heavy drinkers are also slightly more inclined to have a high number of absences than others. However, there seems to be no association between parents' cohabitation status and student's alchol use. It seems that my hypotheses about sex's, absences' and final grade's associations with alcohol consumption might get some support from the explorative analysis.
 
 
 ## Logistic regression model
 
 Let's fit a logistic regression model to see if these findings hold.
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 # First model
 fit1 <- glm(high_use ~ sex + Pstatus + absences + G3, family=binomial, data=dd)
 summary(fit1)
 ```
 
-The equation for the model is of form `log(p/(1-p)) = exp(a + b*sex + c*Pstatus + d*absences + e*G3)` where `p` is the estimated probability for high alcohol use and `a - e` are the model coefficients. `log(p/(1-p))` is the logit function of `p`. The coefficient values for factor variables (sex and Pstatus) are calculated separatedly for each unique factor level so that one level is chosen as the base level. The coefficients presented above denote the difference between the coefficient of the marked level and the base level. So the coefficient for the sex level `F` (chosen as the base level and omitted from the table) is actually the intercept -0.98, and the coefficient for the sex level `M` is -0.98141 + 0.98330 = 0.00189 (cf. [this explanation](http://stats.stackexchange.com/questions/60817/significance-of-categorical-predictor-in-logistic-regression)).
+The equation for the model is of form `log(p/(1-p)) = exp(a + b*sex + c*Pstatus + d*absences + e*G3)` where `p` is the estimated probability for high alcohol use and `a - e` are the model coefficients. `log(p/(1-p))` is the logit function of `p`. The coefficient values for factor variables (sex and Pstatus) are calculated separatedly for each unique factor level so that one level is chosen as the base level. The coefficients presented above denote the difference between the coefficient of the marked level and the base level. So the coefficient for the sex level `F` (chosen as the base level and omitted from the table) is actually the intercept -0.98, and the coefficient for the sex level `M` is -0.98141 + 0.98330 = 0.00189 (cf. explanation [here](http://stats.stackexchange.com/questions/60817/significance-of-categorical-predictor-in-logistic-regression)).
 
-The coefficients are easier to interpret if transformed to odd ratios (ORs) by exponantiation. The odd ratio form of a coefficient denotes the change of the odd p/(1-p), when the value of the explanative variable changes by one unit. We can also use exponentiation and `confint`-function to calculate the confidence intervals for the odd ratios on the confidence level of 0.95.
-```{r}
+The coefficients are easier to interpret if transformed to odd ratios (ORs) by exponantiation: `OR = epx(b)`, where `b` is the original coefficient (OC). The odd ratio of a coefficient denotes the change of the odd `p/(1-p)`, when the value of the explanatory variable changes by one unit. We can also use exponentiation and `confint`-function to calculate the confidence intervals for the odd ratios on the confidence level of 0.95.
+```{r warning=FALSE, error=FALSE, message=FALSE}
 data.frame(OR=round(exp(summary(fit1)$coef[,1]), 3),
            CI=round(exp(confint(fit1)), 3),
            "p-value"=round(summary(fit1)$coef[,4], 3))
 ```
 
 Interpretation of OR values:
-* If OR > 1 (ie. the original coefficient, OC, is positive), an increase in the explanator increases the response probability `p`.
-* If 0 < OR < 1 (ie. negative OC), an increase in the explanator decreases the response probability `p`.
-* If OR = 1 (ie. OC=1), the explanator has no effect on the response variable.
+
+* If OR > 1 (ie. OC > 0), an increase in the explanatory variable increases the response probability `p`.
+* If 0 < OR < 1 (ie. OC < 0), an increase in the explanatory variable decreases the response probability `p`.
+* If OR = 1 (ie. OC = 1), the explanatory variable has no effect on the response variable.
 * (OR is never negative, and OR for a coefficient can't be exactly zero.)
 
 We can check with a likelihood ratio test if the factor variables sex and Pstatus as a whole are statistically significant explanators in our fitted model.
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 anova(fit1, test="Chisq")
 ```
 
@@ -119,8 +123,8 @@ It seems that sex, absences and final grade (G3) are statistically significant e
 
 ## Assessing model performance
 
-The variable Pstatus can be omitted from the model, as it is not statistically significant. Thus the model needs to be refitted.
-```{r}
+The variable Pstatus can be omitted from the model, as it is not statistically significant. Let's refit the model:
+```{r warning=FALSE, error=FALSE, message=FALSE}
 fit2 <- glm(high_use ~ sex + absences + G3, family=binomial, data=dd)
 data.frame(OR=round(exp(summary(fit2)$coef[,1]), 3),
            CI=round(exp(confint(fit2)), 3),
@@ -128,18 +132,20 @@ data.frame(OR=round(exp(summary(fit2)$coef[,1]), 3),
 anova(fit2, test="Chisq")
 ```
 
-Looks good, but how does the model perform as a binary classificator? To assess the model performance we need to produce predictions with it, produce and visualize the confusion matrix, and compute the total proportion of inaccurately classified individuals (= the training error).
-
-```{r}
-# Prediction
+Looks good, but how does the model perform as a binary classificator? We can use the model to predict the probability of high alcohol consumption for the individuals in the training data, and then dicotomize these probabilities to produce a binary prediction for the outcome. For this, we need to set a cutoff probability for a positive outcome (= high alcohol consumption). Choosing a sensible cutoff is an art on its own right, but let's simply use the treshold of 0.5 (ie. the probabilities greater than 0.5 are interpreted to indicate high alcohol consumption). This is probably not a good choice, and it would be a better idea define the cutoff value with eg. a [ROC curve](https://en.wikipedia.org/wiki/Receiver_operating_characteristic).
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Predicting the training data
 pred <- predict(fit2, type="response")
 dd$prob <- pred
 pred2 <- ifelse(pred > 0.5, TRUE, FALSE)
 dd$pred <- pred2
+```
 
+Then we can produce a confusion matrix, which is a two-way crosstabulation of observed versus predicted values for the outcome variable, and visualize it.
+```{r warning=FALSE, error=FALSE, message=FALSE}
 # Confusion matrix
 conf <- table(obs=dd$high_use, pred=pred2)
-test<-addmargins(conf)
+addmargins(conf)
 prop.table(conf)
 
 # Same as a plot
@@ -149,25 +155,42 @@ g <- ggplot(dd, aes(x = prob, y = high_use, col = pred2))
 g + geom_point()
 ```
 
-Training error
-```{r}
+From the confusion matrix we can compute that the total proportion of inaccurately classified individuals (=the training error of the model) is (86 + 12) / 382 = 0.26. Is this better than a simple guessing strategy that nobody is a high user (as it is more common to not drink heavily than to drink)?
+
+The training error of the model:
+```{r warning=FALSE, error=FALSE, message=FALSE}
 # define a loss function (mean prediction error)
 loss_func <- function(class, prob) {
   n_wrong <- abs(class - prob) > 0.5
   mean(n_wrong)
 }
-
 # call loss_func to compute the average number of wrong predictions in the (training) data
-loss_func(class = dd$high_use, prob = dd$prob)
+loss_func(class = dd$high_use, prob = dd$pred)
 ```
 
-
-Simple guessing strategy: nobody is a high user (as it is more common to not drink heavily).
-```{r}
+The training error of the simple guessing:
+```{r warning=FALSE, error=FALSE, message=FALSE}
 # Simple guessing strategy: nobody is a high user
-dd$pred2 <- F
-loss_func(class = dd$high_use, prob = dd$pred2)
+dd$pred3 <- F
+loss_func(class = dd$high_use, prob = dd$pred3)
 ```
+
+The training error of the simple guessing strategy is only slightly bigger than the error of our model, so it seems that our model is not a very succesful predictor for alchol consumption.
+
+
+## Bonus: Cross-validation
+
+Above, we assessed the model performance based on the model's ability to correctly predict the same data as on which the model was trained. This is not a good idea, as the model generally fits the training data better than any unseen data. To avoid this overestimation, we can perform cross-validation to get a more realistic estimate of the actual predictive power of the model. Let's perform 10-fold cross-validation, which means that we divide the data into 10 complementary parts. One part forms the testing set, and the other 9 parts another subset called training set. We perform the analysis on the training set, and then validate the results on the smaller testing set. We repeat this process so that eventually all of the data is used for both training and testing, and then calculate the mean error rate of our model as an average of all repetitions.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+library(boot)
+cv <- cv.glm(data = dd, cost = loss_func, glmfit = fit2, K = 10)
+cv$delta[1]
+```
+
+We can see that the cross-validated error rate of our model actually is higher than the training error of the model (0.257). The test set performance of the model is about the same as of the model fitted in the DataCamp exercise.
+
+
+
 
 
 

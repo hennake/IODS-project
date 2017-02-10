@@ -153,8 +153,25 @@ loss_func(class = dd$high_use, prob = dd$prob)
 
 
 # Simple guessing strategy: nobody is a high user
-dd$pred2 <- F
-loss_func(class = dd$high_use, prob = dd$pred2)
+dd$pred3 <- F
+addmargins(table(obs=dd$high_use, pred=dd$pred3))
+loss_func(class = dd$high_use, prob = dd$pred3)
+
+
+## Crossvalidation
+
+# K-fold cross-validation
+library(boot)
+cv <- cv.glm(data = dd, cost = loss_func, glmfit = fit2, K = 10)
+
+# average number of wrong predictions in the cross validation
+cv$delta[1]
+
+
+
+
+
+
 
 
 
