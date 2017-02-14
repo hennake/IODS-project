@@ -263,7 +263,7 @@ summary(fit1)</code></pre>
 ## AIC: 435.51
 ## 
 ## Number of Fisher Scoring iterations: 4</code></pre>
-<p>The equation for the model is of form <code>log(p/(1-p)) = exp(a + b*sex + c*Pstatus + d*absences + e*G3)</code> where <code>p</code> is the estimated probability for high alcohol use and <code>a - e</code> are the model coefficients. <code>log(p/(1-p))</code> is the logit function of <code>p</code>. The coefficient values for factor variables (sex and Pstatus) are calculated separatedly for each unique factor level so that one level is chosen as the base level. The coefficients presented above denote the difference between the coefficient of the marked level and the base level. So the coefficient for the sex level <code>F</code> (chosen as the base level and omitted from the table) is actually the intercept -0.98, and the coefficient for the sex level <code>M</code> is -0.98141 + 0.98330 = 0.00189 (cf. explanation <a href="http://stats.stackexchange.com/questions/60817/significance-of-categorical-predictor-in-logistic-regression">here</a>).</p>
+<p>The equation for the model is of form <code>log(p/(1-p)) = a + b*sex + c*Pstatus + d*absences + e*G3</code> where <code>p</code> is the estimated probability for high alcohol use and <code>a - e</code> are the model coefficients. <code>log(p/(1-p))</code> is the logit function of <code>p</code>. The coefficient values for factor variables (sex and Pstatus) are calculated separatedly for each unique factor level so that one level is chosen as the base level. The coefficients presented above denote the difference between the coefficient of the marked level and the base level. So the coefficient for the sex level <code>F</code> (chosen as the base level and omitted from the table) is actually the intercept -0.98, and the coefficient for the sex level <code>M</code> is -0.98141 + 0.98330 = 0.00189 (cf. explanation <a href="http://stats.stackexchange.com/questions/60817/significance-of-categorical-predictor-in-logistic-regression">here</a>).</p>
 <p>The coefficients are easier to interpret if transformed to odd ratios (ORs) by exponantiation: <code>OR = epx(b)</code>, where <code>b</code> is the original coefficient (OC). The odd ratio of a coefficient denotes the change of the odd <code>p/(1-p)</code>, when the value of the explanatory variable changes by one unit. We can also use exponentiation and <code>confint</code>-function to calculate the confidence intervals for the odd ratios on the confidence level of 0.95.</p>
 <pre class="r"><code>data.frame(OR=round(exp(summary(fit1)$coef[,1]), 3),
            CI=round(exp(confint(fit1)), 3),
@@ -380,7 +380,7 @@ loss_func(class = dd$high_use, prob = dd$pred3)</code></pre>
 <pre class="r"><code>library(boot)
 cv &lt;- cv.glm(data = dd, cost = loss_func, glmfit = fit2, K = 10)
 cv$delta[1]</code></pre>
-<pre><code>## [1] 0.2670157</code></pre>
+<pre><code>## [1] 0.2591623</code></pre>
 <p>We can see that the cross-validated error rate of our model actually is higher than the training error of the model (0.257). The test set performance of the model is about the same as of the model fitted in the DataCamp exercise.</p>
 </div>
 </div>
