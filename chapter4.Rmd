@@ -1,0 +1,184 @@
+# Exercise 4: Data analysis
+
+
+## Description of the data
+
+The dataset used in this exercise contains housing data in the suburban Boston. This is a built-in dataset in the R package MASS, and can be loaded with the `data(Boston)` command. Let's check the variables and the structure of the data:
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Load Boston data
+library(dplyr)
+library(MASS)
+data(Boston)
+
+# Structure and dimensions
+str(Boston)
+```
+
+There are 506 rows and 14 columns in the data. The dataset is described in more details in the [help file](https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/Boston.html).
+
+
+## Explorative analyses
+
+How does the data look like? Let's produce summaries and a graphical overview of the variables:
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+summary(Boston)
+```
+
+All variables are numerical/integer except `chas`, which is a binary dummy variable indicating the location with respect to Charles River. The variables vary in scale.
+
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=10, fig.height=10}
+# Pairplot
+pairs(Boston, cex=0.1, pch=16)
+```
+
+Visualization of correlations between variables:
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Correlation matrix and visualization
+library(tidyr)
+library(corrplot)
+cor_matrix<-cor(Boston) 
+corrplot(cor_matrix, method="circle", type="upper", cl.pos="b", tl.pos="d", tl.cex=0.6)
+```
+
+There seems to be a number of linear associations between the variables as shown in the pairplot, eg. between the number of rooms (rm) and the median value of owner-occupied real estates (medv), and between the proportion of owner-occupied units built prior to 1940 (age) and nitrogen oxides concentration (nox), to name but a few.
+
+
+## Data manipulation
+
+Let's standardize the dataset for further analyses. This means that we subtract the column means from the corresponding columns and divide the difference with standard deviation. After standardization, all the (scaled) variables are centered around zero, and their unit is one standard deviation.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Scaling
+bs <- as.data.frame(scale(Boston))
+summary(bs)
+```
+
+Let's transform the crime rate (`crim`) into a categorical variable. We want to cut the variable by quantiles to get the high, low and middle rates of crime into their own categories. This is achieved by using the quantiles as break points.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Transform 'crim' to a categorical variable
+bs$crim <- cut(bs$crim, breaks = quantile(bs$crim), include.lowest = TRUE, labels = c("low", "med_low", "med_high", "high"))
+
+# Look at the table of the new factor crim
+table(bs$crim)
+```
+
+Then we need to divide the dataset to train and test sets for futher analyses. Splitting the original data to test and train sets allows us to check how well our models work. We make the division here in such a way that 80 % on the data belongs to the train set (and 20 % to the test set).
+```{r warning=FALSE, error=FALSE, message=FALSE}
+ind <- sample(nrow(bs), nrow(bs)*0.8)
+train <- bs[ind,]
+test <- bs[-ind,]
+```
+
+
+## Linear discriminant analysis (LDA)
+
+Linear discriminant analysis (LDA) is a classification method that can be used to
+
+* Find the variables that separate the classes best
+* Predict the classes of new data
+* Dimension reduction.
+
+The target variable of LDA needs to be categorical. 
+
+Let's try LDA on the newly created categorical crime rate variable (`crim`) to see if we can find some other variables that separate different crime rate classes from each other. This means that we use all the other variables in the dataset as predictor variables. The LDA is fitted on the train dataset.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Linear discriminant analysis
+set.seed(123)
+lda.fit <- lda(formula=as.numeric(crim) ~ ., data = train)
+
+# print the lda.fit object
+lda.fit
+```
+
+We can visualize the results of LDA with a biplot. The original variables and their effects can be visualized as arrows on top of the biplot.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# the function for lda biplot arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0,
+         x1 = myscale * heads[,choices[1]],
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads),
+       cex = tex, col=color, pos=3)
+}
+
+# plot the lda results
+classes <- as.numeric(train$crim)
+plot(lda.fit, dimen = 2, col = classes)
+lda.arrows(lda.fit, myscale = 2, col = "#666666")
+```
+
+We can see how well the LDA model performs by predicting new data on the test set with it. Then we can calculate the total error of prediction by crosstabulating the results against the original data, similarly as was done when predicting data with a logistic regression model. (Note to self: there's actually no need to remove the categorical crime rate variable from test data, but I did as was instructed.)
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# save and remove categorical crime data from test data
+crime <- test$crim
+test <- dplyr::select(test, -crim)
+
+# predict classes with test data
+lda.pred <- predict(lda.fit, newdata = test)
+
+# cross tabulate the results
+table(correct = as.numeric(crime), predicted = lda.pred$class)
+```
+
+We can calculate from the confusion matrix that the total error rate is about 29 % in the test data. In other words, the model correctly classifies 71 % of new cases, which is not a bad rate compared to the expected success rate of 25 %, if randomly guessing one of four classes.
+
+
+## Clustering with K-means
+
+We used LDA to separate and predict known classes of individual observations. But what if we don't know the classes in advance, but want to detect similar observations and assing them to groups or clusters based on their similarity? We can use clustering methods, eg. K-means algorithm, to achieve this.
+
+First, we need to calculate the (dis)similarity or distance of individual observations. There are many different distance measures, but let's use the Euclidean distance, which is the "normal" or most common distance measure.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# load MASS and Boston
+data('Boston')
+bs2 <- as.data.frame(scale(Boston))
+
+# euclidean distance matrix
+dist_eu <- dist(bs2)
+```
+
+K-means is an unsupervised clustering method that iteratively updates the cluster memberships of individual observations so that eventually similar observations belong to same clusters. We need to decide the number of clusters we want to have before running the K-means algorithm. Let's start with 5 clusters:
+```{r warning=FALSE, error=FALSE, message=FALSE}
+km <-kmeans(dist_eu, centers = 5)
+```
+
+But wait! How do we know the optimal number of clusters? One way to determine the number of clusters is to look at how the total of within cluster sum of squares (WCSS) behaves when the number of clusters changes.
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
+# determine the initial number of clusters
+k_max <- 10
+
+# calculate the total within sum of squares
+set.seed(123)
+twcss <- sapply(1:k_max, function(k){kmeans(dist_eu, k)$tot.withinss})
+
+# visualize the results
+plot(1:k_max, twcss, type='b')
+```
+
+The optimal number of clusters is when the total WCSS drops radically, so let's rerun K-means with 2 clusters. We can visualize the results with a pairplot, where the clusters are separated with colors.
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=10, fig.height=10}
+# Optimal number of clusters is when the total of within cluster sum of squares drops drastically
+# -> 2 clusters
+km <-kmeans(dist_eu, centers = 2)
+
+# plot the scaled Boston dataset with clusters
+pairs(bs, col = km$cluster,  cex=0.1, pch=16)
+```
+
+We can see from the pairplot that `nox` is the most informative variable to separate the two clusters from each other. Also `indus`, `rad`, `tax` and `medv` contain information that can be used in clustering.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
