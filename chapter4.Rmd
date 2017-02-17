@@ -81,7 +81,7 @@ Linear discriminant analysis (LDA) is a classification method that can be used t
 
 The target variable of LDA needs to be categorical. 
 
-Let's try LDA on the newly created categorical crime rate variable (`crim`) to see if we can find some other variables that separate different crime rate classes from each other. This means that we use all the other variables in the dataset as predictor variables. The LDA is fitted on the train dataset.
+Let's try LDA on the newly created categorical crime rate variable (`crim`) to see if we can find combinations of variables that separate different crime rate classes from each other. This means that we use all the other variables in the dataset as predictor variables. The LDA is fitted on the train dataset.
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 # Linear discriminant analysis
 set.seed(123)
@@ -91,7 +91,9 @@ lda.fit <- lda(formula=as.numeric(crim) ~ ., data = train)
 lda.fit
 ```
 
-We can visualize the results of LDA with a biplot. The original variables and their effects can be visualized as arrows on top of the biplot.
+We can see from the result that three linear discriminant functions were formed (number of crime categories minus one, which is the maximum possible number). These discriminant functions are linear combinations of original variables, and the coefficients for each function and variable pair can be seen in the table. From the proportion of trace we can see that the first dicriminant function LD1 explains 96 % of the between-group variance, and the other functions LD2 and LD3 explain 3.2 % and 1.1 % respectively.
+
+We can visualize the results of LDA with a biplot. The original variables and their effects can be visualized as arrows on top of the biplot. First two LD functions are shown in the plot. 
 ```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
 # the function for lda biplot arrows
 lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
@@ -109,7 +111,9 @@ plot(lda.fit, dimen = 2, col = classes)
 lda.arrows(lda.fit, myscale = 2, col = "#666666")
 ```
 
-We can see how well the LDA model performs by predicting new data on the test set with it. Then we can calculate the total error of prediction by crosstabulating the results against the original data, similarly as was done when predicting data with a logistic regression model. (Note to self: there's actually no need to remove the categorical crime rate variable from test data, but I did as was instructed.)
+The biplot reveals us that variable rad nearly perfectly separates the high crime rate class from other classes, as there is only one observation that mixes with a lower class. The other three lower crime rate classes don't separate properly.
+
+We can see how well the LDA model performs also by predicting new data on the test set with it. Then we can calculate the total error of prediction by crosstabulating the results against the original data, similarly as was done when predicting data with a logistic regression model. (Note to self: there's actually no need to remove the categorical crime rate variable from test data, but I did as was instructed.)
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 # save and remove categorical crime data from test data
 crime <- test$crim
@@ -122,7 +126,7 @@ lda.pred <- predict(lda.fit, newdata = test)
 table(correct = as.numeric(crime), predicted = lda.pred$class)
 ```
 
-We can calculate from the confusion matrix that the total error rate is about 29 % in the test data. [The confusion matrix changes on every knitting because of randomization, so the error rate given here doesn't probably match the matrix shown above!]. In other words, the model correctly classifies 71 % of new cases, which is not a bad rate compared to the expected success rate of 25 %, if randomly guessing one of four classes.
+We can calculate from the confusion matrix that the total error rate is about 29 % in the test data. [The confusion matrix changes on every knitting because of randomization, so the error rate given here doesn't probably match the matrix shown above!]. In other words, the model correctly classifies 71 % of new cases, which is not a bad rate compared to the expected success rate of 25 %, if randomly guessing one of four classes. The best classification performance was achieved in the high crime rate class.
 
 
 ## Clustering with K-means
@@ -167,7 +171,7 @@ km <-kmeans(dist_eu, centers = 2)
 pairs(bs, col = km$cluster,  cex=0.1, pch=16)
 ```
 
-We can see from the pairplot that `nox` is the most informative variable to separate the two clusters from each other. Also `indus`, `rad`, `tax` and `medv` contain information that can be used in clustering.
+We can see from the pairplot that `rad` and `tax` are the two most informative variables to separate the two clusters from each other. Also `nox` seems to contain useful information for clustering.
 
 
 ## Bonus
