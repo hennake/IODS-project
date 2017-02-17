@@ -111,9 +111,9 @@ plot(lda.fit, dimen = 2, col = classes)
 lda.arrows(lda.fit, myscale = 2, col = "#666666")
 ```
 
-The biplot reveals us that variable rad nearly perfectly separates the high crime rate class from other classes, as there is only one observation that mixes with a lower class. The other three lower crime rate classes don't separate properly.
+The biplot reveals us that variable rad nearly perfectly separates the high crime rate class from other classes, as there is only one observation that mixes with lower classes. The other three lower crime rate classes don't separate properly.
 
-We can see how well the LDA model performs also by predicting new data on the test set with it. Then we can calculate the total error of prediction by crosstabulating the results against the original data, similarly as was done when predicting data with a logistic regression model. (Note to self: there's actually no need to remove the categorical crime rate variable from test data, but I did as was instructed.)
+We can see how well the LDA model performs as a whole by predicting new data on the test set with it. Then we can calculate the total error of prediction by crosstabulating the results against the original data, similarly as was done when predicting data with a logistic regression model. (Note to self: there's actually no need to remove the categorical crime rate variable from test data, but I did as was instructed.)
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 # save and remove categorical crime data from test data
 crime <- test$crim
