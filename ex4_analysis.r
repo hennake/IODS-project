@@ -102,3 +102,41 @@ km <-kmeans(dist_eu, centers = 2)
 # plot the scaled Boston dataset with clusters
 pairs(bs, col = km$cluster,  cex=0.1, pch=16)
 
+
+
+# Bonus
+
+# k-means again
+set.seed(123)
+km2 <- kmeans(dist_eu, centers = 5)
+
+# LDA with using the k-means clusters as target classes
+bs2$cl <- km2$cluster
+lda.fit2 <- lda(cl ~ ., data = bs2)
+plot(lda.fit2, col=as.numeric(bs2$cl), dimen=2)
+lda.arrows(lda.fit2, myscale = 3, col = "#666666")
+summary(lda.fit2)
+
+
+# Super bonus
+
+model_predictors <- dplyr::select(train, -crim)
+# check the dimensions
+dim(model_predictors)
+dim(lda.fit$scaling)
+# matrix multiplication
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+
+library(plotly)
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers')
+
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color=train$crim)
+
+train$cl <- bs2$cl[match(rownames(train), rownames(bs2))]
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color=as.factor(train$cl))
+
+
+
+
+

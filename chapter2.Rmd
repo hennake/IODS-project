@@ -1,4 +1,4 @@
-# Exercise 2: Data analysis
+# Exercise 2: Regression and model validation
 
 
 ## Description of the data

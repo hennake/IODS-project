@@ -1,4 +1,4 @@
-# Exercise 3: Data analysis
+# Exercise 3: Logistic regression
 
 
 ## Description of the data

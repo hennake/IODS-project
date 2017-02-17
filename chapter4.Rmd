@@ -1,4 +1,4 @@
-# Exercise 4: Data analysis
+# Exercise 4: Clustering and classification
 
 
 ## Description of the data
@@ -92,7 +92,7 @@ lda.fit
 ```
 
 We can visualize the results of LDA with a biplot. The original variables and their effects can be visualized as arrows on top of the biplot.
-```{r warning=FALSE, error=FALSE, message=FALSE}
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
 # the function for lda biplot arrows
 lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
   heads <- coef(x)
@@ -122,7 +122,7 @@ lda.pred <- predict(lda.fit, newdata = test)
 table(correct = as.numeric(crime), predicted = lda.pred$class)
 ```
 
-We can calculate from the confusion matrix that the total error rate is about 29 % in the test data. In other words, the model correctly classifies 71 % of new cases, which is not a bad rate compared to the expected success rate of 25 %, if randomly guessing one of four classes.
+We can calculate from the confusion matrix that the total error rate is about 29 % in the test data. [The confusion matrix changes on every knitting because of randomization, so the error rate given here doesn't probably match the matrix shown above!]. In other words, the model correctly classifies 71 % of new cases, which is not a bad rate compared to the expected success rate of 25 %, if randomly guessing one of four classes.
 
 
 ## Clustering with K-means
@@ -170,8 +170,40 @@ pairs(bs, col = km$cluster,  cex=0.1, pch=16)
 We can see from the pairplot that `nox` is the most informative variable to separate the two clusters from each other. Also `indus`, `rad`, `tax` and `medv` contain information that can be used in clustering.
 
 
+## Bonus
+
+K-means clusters as targets of LDA
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
+# k-means again
+set.seed(123)
+km2 <- kmeans(dist_eu, centers = 5)
+
+# LDA with using the k-means clusters as target classes
+bs2$cl <- km2$cluster
+lda.fit2 <- lda(cl ~ ., data = bs2)
+plot(lda.fit2, col=as.numeric(bs2$cl), dimen=2)
+lda.arrows(lda.fit2, myscale = 3, col = "#666666")
+```
 
 
+## Super-Bonus
+
+### 3D visualizations with plotly
+
+Color is defined by the categorical crime rate:
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
+model_predictors <- dplyr::select(train, -crim)
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+library(plotly)
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color=train$crim)
+```
+
+Color is defined by the clusters of the k-means:
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
+train$cl <- bs2$cl[match(rownames(train), rownames(bs2))]
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color=as.factor(train$cl))
+```
 
 
 
