@@ -31,3 +31,38 @@ human <- inner_join(hd, gii, by = "country")
 # Call the new joined data human and save it in your data folder.
 save(human, file="./data/human.RData")
 
+
+# 2017-02-22
+# Exercise 5: data wrangling
+
+library(stringr)
+
+
+# Mutate the data: transform the Gross National Income (GNI) variable to numeric (Using string manipulation.)
+human$GNI <- str_replace(human$GNI, pattern=",", replace ="") %>% as.numeric()
+
+
+# Exclude unneeded variables: keep only the columns matching the following variable names:  
+# "Country", "Edu2.FM", "Labo.FM", "Edu.Exp", "Life.Exp", "GNI", "Mat.Mor", "Ado.Birth", "Parli.F"
+# Note: I have different names
+keep <- c("country", "edu2FMrat", "labFMrat", "lifexxp", "expedu", "GNI", "matmor", "adbi", "repparl")
+human <- select(human, one_of(keep))
+
+
+# Remove all rows with missing values.
+human2 <- filter(human, complete.cases(human))
+
+
+# Remove the observations which relate to regions instead of countries.
+regions<-c("Arab States", "East Asia and the Pacific", "Europe and Central Asia", "Latin America and the Caribbean", "South Asia", 
+           "Sub-Saharan Africa", "World")
+human3 <- human2[-which(human2$country %in% regions),]
+
+
+# Define the row names of the data by the country names and remove the country name column from the data. The data should now have 155 observations and 8 variables 
+rownames(human3) <- human3$country
+human4 <- select(human3, -country)
+
+
+
+
