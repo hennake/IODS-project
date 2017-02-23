@@ -1,0 +1,92 @@
+# Exercise 5: Dimensionality reduction techniques
+
+
+## Description of the data
+
+The data used in this exercise is taken from the Human Development Report 2015 (see more info [here](http://hdr.undp.org/en/content/human-development-index-hdi)).
+
+Two different datasets, one on human development and another on gender inequality, were combined in the data wrangling exercise to include the following variables:
+
+* edu2FMrat: ratio of proportions of females/males with at least secondary education
+* labFMrat: ratio of proportions of females/males in labour force
+* expedu: expected years of schooling
+* lifexxp: life expectancy at birth
+* GNI: gross national income per capita
+* matmor: maternal mortality ratio
+* adbi: adolescent birth rate
+* repparl: percentage of female representatives in parliament
+
+Observations (countries) with missing values were removed, and the manipulated data consist of 155 countries.
+
+Let's load the data.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Load human data
+library(dplyr)
+library(corrplot)
+library(tidyr)
+load("./data/human.RData")
+```
+
+
+## Explorative analyses
+
+How does the data look like? Let's produce summaries and a graphical overview of the variables:
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Structure and dimensions
+str(human4)
+
+
+# Variable summaries and graphical overview
+summary(human4)
+library(GGally)
+library(ggplot2)
+p <- ggpairs(human4, mapping = aes(alpha = 0.3), lower = list(combo = wrap("facethist", bins = 20)))
+p
+```
+
+
+## Principal Component Analysis (PCA)
+
+Let's first try PCA on unstandardized data.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# PCA on unstandardized data
+pca_human <- prcomp(human4)
+pca_human
+summary(pca_human)
+biplot(pca_human, choices = 1:2, cex = c(0.6, 1), col = c("grey40", "deeppink2"))
+```
+
+Doesn't look very good, as PCA assumes that a large variance means an important variable. The variable GNI (gross national income per capita) has a variance much larger than the other variables, and thus gets way too much weight in PCA.
+
+We need to standardize the data and redo PCA.
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Standardize and repeat
+human_std <- scale(human4)
+summary(human_std)
+pca_human_std <- prcomp(human_std)
+pca_human_std
+summary(pca_human_std)
+biplot(pca_human_std, choices = 1:2, cex = c(0.6, 1), col = c("grey40", "darkviolet"))
+```
+
+
+## Multiple Correspondence Analysis (MCA)
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+# Load tea dataset
+library(FactoMineR)
+data(tea)
+summary(tea)
+
+
+# MCA
+res.mca <- MCA(tea,quanti.sup=19,quali.sup=20:36,graph=FALSE)
+plot(res.mca, invisible = c("var"))
+plot(res.mca, invisible = c("ind"), habillage="quali")
+summary(res.mca)
+```
+
+
+
+
+

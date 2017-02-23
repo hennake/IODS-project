@@ -14,7 +14,7 @@ summary(hd)
 summary(gii)
 
 # Look at the meta files and rename the variables with (shorter) descriptive names.
-colnames(hd) <- c("HDIrank","country","HDI","lifexxp","expedu","meanedu","GNI","rank2")
+colnames(hd) <- c("HDIrank","country","HDI","lifeexp","expedu","meanedu","GNI","rank2")
 colnames(gii) <- c("GIIrank","country","GII","matmor","adbi","repparl","edu2F","edu2M","labF","labM")
 
 # Mutate the “Gender inequality” data and create two new variables. 
@@ -45,7 +45,7 @@ human$GNI <- str_replace(human$GNI, pattern=",", replace ="") %>% as.numeric()
 # Exclude unneeded variables: keep only the columns matching the following variable names:  
 # "Country", "Edu2.FM", "Labo.FM", "Edu.Exp", "Life.Exp", "GNI", "Mat.Mor", "Ado.Birth", "Parli.F"
 # Note: I have different names
-keep <- c("country", "edu2FMrat", "labFMrat", "lifexxp", "expedu", "GNI", "matmor", "adbi", "repparl")
+keep <- c("country", "edu2FMrat", "labFMrat", "lifeexp", "expedu", "GNI", "matmor", "adbi", "repparl")
 human <- select(human, one_of(keep))
 
 
@@ -63,6 +63,7 @@ human3 <- human2[-which(human2$country %in% regions),]
 rownames(human3) <- human3$country
 human4 <- select(human3, -country)
 
+save(human4, file="./data/human.RData")
 
 
 
