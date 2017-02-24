@@ -7,14 +7,14 @@ The data used in this exercise is taken from the Human Development Report 2015 (
 
 Two different datasets, one on human development and another on gender inequality, were combined in the data wrangling exercise to include the following variables:
 
-* edu2FMrat: ratio of proportions of females/males with at least secondary education
-* labFMrat: ratio of proportions of females/males in labour force
-* expedu: expected years of schooling
-* lifexxp: life expectancy at birth
-* GNI: gross national income per capita
-* matmor: maternal mortality ratio
-* adbi: adolescent birth rate
-* repparl: percentage of female representatives in parliament
+* *edu2FMrat*: ratio of proportions of females/males with at least secondary education
+* *labFMrat*: ratio of proportions of females/males in labour force
+* *expedu*: expected years of schooling
+* *lifexxp*: life expectancy at birth
+* *GNI*: gross national income per capita
+* *matmor*: maternal mortality ratio
+* *adbi*: adolescent birth rate
+* *repparl*: percentage of female representatives in parliament
 
 Observations (countries) with missing values were removed, and the manipulated data consist of 155 countries.
 
@@ -31,7 +31,7 @@ load("./data/human.RData")
 ## Explorative analyses
 
 How does the data look like? Let's produce summaries and a graphical overview of the variables:
-```{r warning=FALSE, error=FALSE, message=FALSE}
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=10, fig.height=8}
 # Structure and dimensions
 str(human4)
 
@@ -44,11 +44,13 @@ p <- ggpairs(human4, mapping = aes(alpha = 0.3), lower = list(combo = wrap("face
 p
 ```
 
+All the variables are numerical, but have varying scales, eg. *edu2FMrat* and *labFMrat* are ratios, *repparl* is a percentage, and *GNI* is a sum index. There are several strong correlations between variables, eg. a positive correlation of 0.76 beween *adbi* (adult birth rate) and *lifeexp* (life expectancy at birth), and a negative correlation of -0.86 between *matmor* (maternal mortality ratio) and *lifeexp*.
+
 
 ## Principal Component Analysis (PCA)
 
-Let's first try PCA on unstandardized data.
-```{r warning=FALSE, error=FALSE, message=FALSE}
+Principal component analysis (PCA) is a dimension reduction technique that seeks to transform the data to principal components that are linear combinations of original variables. Let's first try PCA on unstandardized data.
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=8, fig.height=8}
 # PCA on unstandardized data
 pca_human <- prcomp(human4)
 pca_human
@@ -56,10 +58,8 @@ summary(pca_human)
 biplot(pca_human, choices = 1:2, cex = c(0.6, 1), col = c("grey40", "deeppink2"))
 ```
 
-Doesn't look very good, as PCA assumes that a large variance means an important variable. The variable GNI (gross national income per capita) has a variance much larger than the other variables, and thus gets way too much weight in PCA.
-
-We need to standardize the data and redo PCA.
-```{r warning=FALSE, error=FALSE, message=FALSE}
+Doesn't look very good! PCA assumes that a large variance means an important variable. The variable GNI (gross national income per capita) has a variance much larger than the other variables, and thus gets way too much weight in PCA. We need to standardize the data to scale down the effect of different variances, and redo PCA.
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=8, fig.height=8}
 # Standardize and repeat
 human_std <- scale(human4)
 summary(human_std)
@@ -68,6 +68,10 @@ pca_human_std
 summary(pca_human_std)
 biplot(pca_human_std, choices = 1:2, cex = c(0.6, 1), col = c("grey40", "darkviolet"))
 ```
+
+The standardization helped, and now the results look more reasonable. The first principal component explains 53 % of variation, and the first three principal components cumulatively explain almost 80 % of the variation in our data. So we have effectively reduced the number of variables needed to characterize the data set. Moreover, the principal components are always orthogonal (ie. don't correlate with each other), which is handy if we would like to perform further analyses, e.g. linear regression, on them.
+
+The first principal component (PC1) is a linear combination of other variables than female representation in labour force and in parliament (*labFMrat* and *repparl*, respectively), as these two variables are the only ones to have low loadings on PC1 (ie. don't correlate with PC1). On the other hand, these two variables have high loadings on PC2, whereas other variables barely correlate with PC2. Female representation both in labour force and parliament positively correlates with PC2, so we can interpret PC2 to represent gender equality (most gender-equal countries are located on top of the biplot). Female participation in secondary education (*edu2FMrat*), life expectation (*lifeexp*), expected years of education (*expedu*) and gross national income per capita (*GNI*) have negative loadings on PC1, whereas maternal mortality rate (*matmor*) and adolescent birth rate (*adbi*) have positive loadings on it. This seems to imply that high value of PC1 (location on right of the biplot) signifies low development level of a country, combining social, educational and economic aspects of development.
 
 
 ## Multiple Correspondence Analysis (MCA)
