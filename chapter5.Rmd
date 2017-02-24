@@ -50,7 +50,7 @@ All the variables are numerical, but have varying scales, eg. *edu2FMrat* and *l
 ## Principal Component Analysis (PCA)
 
 Principal component analysis (PCA) is a dimension reduction technique that seeks to transform the data to principal components that are linear combinations of original variables. Let's first try PCA on unstandardized data.
-```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=8, fig.height=8}
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=7, fig.height=7}
 # PCA on unstandardized data
 pca_human <- prcomp(human4)
 pca_human
@@ -58,8 +58,8 @@ summary(pca_human)
 biplot(pca_human, choices = 1:2, cex = c(0.6, 1), col = c("grey40", "deeppink2"))
 ```
 
-Doesn't look very good! PCA assumes that a large variance means an important variable. The variable GNI (gross national income per capita) has a variance much larger than the other variables, and thus gets way too much weight in PCA. We need to standardize the data to scale down the effect of different variances, and redo PCA.
-```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=8, fig.height=8}
+Doesn't look very good, as there only seems to be one important variable.This is because PCA assumes that a large variance means an important variable. The variable GNI (gross national income per capita) has a variance much larger than the other variables, and thus gets way too much weight in PCA. We need to standardize the data to scale down the effect of different-sized variances, and redo PCA.
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=7, fig.height=7}
 # Standardize and repeat
 human_std <- scale(human4)
 summary(human_std)
@@ -76,15 +76,26 @@ The first principal component (PC1) is a linear combination of other variables t
 
 ## Multiple Correspondence Analysis (MCA)
 
+Next, we try another dimension reduction method on tea data from the package FactoMineR. This dataset includes 300 observations of people's tea drinking habits.
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 # Load tea dataset
 library(FactoMineR)
 data(tea)
-summary(tea)
+str(tea)
+```
 
+The dataset includes almost exclusively factor variables, so we can't now perform PCA, which requires numerical variables. There is also a very high number of variables in the data, so let's only choose a subset of them for further analysis.
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=7, fig.height=7}
+library(tidyr)
+tea2 <- tea[c("breakfast","tea.time","friends","Tea","How","sugar","sex","sophisticated")]
+str(tea2)
+gather(tea2) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
 
+Let's perform multiple correspondence analysis (MCA) on these 8 variables. MCA is a generalization of PCA that can be used on categorical data.
+```{r warning=FALSE, error=FALSE, message=FALSE}
 # MCA
-res.mca <- MCA(tea,quanti.sup=19,quali.sup=20:36,graph=FALSE)
+res.mca <- MCA(tea2, graph=FALSE)
 plot(res.mca, invisible = c("var"))
 plot(res.mca, invisible = c("ind"), habillage="quali")
 summary(res.mca)
