@@ -50,7 +50,7 @@ All the variables are numerical, but have varying scales, eg. *edu2FMrat* and *l
 ## Principal Component Analysis (PCA)
 
 Principal component analysis (PCA) is a dimension reduction technique that seeks to transform the data to principal components that are linear combinations of original variables. Let's first try PCA on unstandardized data.
-```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=7, fig.height=7}
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
 # PCA on unstandardized data
 pca_human <- prcomp(human4)
 pca_human
@@ -59,7 +59,7 @@ biplot(pca_human, choices = 1:2, cex = c(0.6, 1), col = c("grey40", "deeppink2")
 ```
 
 Doesn't look very good, as there only seems to be one important variable.This is because PCA assumes that a large variance means an important variable. The variable GNI (gross national income per capita) has a variance much larger than the other variables, and thus gets way too much weight in PCA. We need to standardize the data to scale down the effect of different-sized variances, and redo PCA.
-```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=7, fig.height=7}
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
 # Standardize and repeat
 human_std <- scale(human4)
 summary(human_std)
@@ -84,7 +84,7 @@ data(tea)
 str(tea)
 ```
 
-The dataset includes almost exclusively factor variables, so we can't now perform PCA, which requires numerical variables. There is also a very high number of variables in the data, so let's only choose a subset of them for further analysis.
+The dataset includes almost exclusively factor variables, so we can't now perform PCA, which requires numerical variables. There is a very high number of variables in the data, so let's only choose a subset of them for further analysis.
 ```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=7, fig.height=7}
 library(tidyr)
 tea2 <- tea[c("breakfast","tea.time","friends","Tea","How","sugar","sex","sophisticated")]
@@ -92,16 +92,24 @@ str(tea2)
 gather(tea2) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
 ```
 
-Let's perform multiple correspondence analysis (MCA) on these 8 variables. MCA is a generalization of PCA that can be used on categorical data.
+Let's perform a multiple correspondence analysis (MCA) on these 8 variables. MCA is a generalization of PCA that can be used to visualize categorical data on Euclidean space.
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 # MCA
 res.mca <- MCA(tea2, graph=FALSE)
-plot(res.mca, invisible = c("var"))
-plot(res.mca, invisible = c("ind"), habillage="quali")
-summary(res.mca)
+summary(res.mca, nbelements=Inf, nbind=5)
 ```
 
+The first two dimensions retain 27 % of variance in the data. The v-test values show that most categories have significant (abs(v.test) > 1.96) coordinates in the first three dimensions. Variables sex and tea time have highest correlations with the dimension 1, and variables breakfast, Tea and How have highest correlations with the dimension 2.
 
+We can visualize the results with biplots using different options.
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.width=6, fig.height=6}
+# MCA
+plot(res.mca, invisible = c("var"))
+plot(res.mca, invisible = c("ind"), habillage="quali")
+```
 
+The second biplot shows the individual categories plotted on (Euclidean) MCA space formed by first two MCA dimensions. Categories that are mutually similar are positioned close to each other in the biplot. We can see one clear outlier category, those who choose to drink their tea with "other" ways, on top of the plot. However, there are very few cases in this category, as could be seen on the barplot that was plotted earlier. 
+
+In the second biplot, dimension 1 separates females and males to different groups, as the category summary above implied. Females seem to prefer to drink their tea at tea time, with friends and with no sugar, whereas men are not that particular about drinking tea at tea time or with friends, and more often use sugar. Dimension 2 separates those drinking their tea on breakfast and those who do not drink tea on breakfast. The former group prefers drinking black tea with milk, whereas the latter chooses green tea or Earl Grey (weird! isn't Earl Grey a black tea variant?) alone or with lemon.
 
 
